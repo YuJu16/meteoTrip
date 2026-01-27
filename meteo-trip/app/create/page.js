@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, MapPin, Calendar, Save, Plane, Loader2 } from 'lucide-react'
@@ -22,6 +22,16 @@ export default function CreateItinerary() {
     const [loading, setLoading] = useState(false)
     const [citySuggestions, setCitySuggestions] = useState({}) // { stepIndex: [cities] }
     const [activeStepIndex, setActiveStepIndex] = useState(null)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+    // Vérifier l'authentification au chargement
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setIsAuthenticated(!!user)
+        }
+        checkAuth()
+    }, [])
 
     // -- FONCTION UTILISER SUGGESTION IA --
     const useSuggestion = (suggestion) => {
@@ -40,6 +50,12 @@ export default function CreateItinerary() {
 
     // -- LOGIQUE DES ÉTAPES --
     const addStep = () => {
+        // Limiter à 1 destination pour les utilisateurs non connectés
+        if (!isAuthenticated && steps.length >= 1) {
+            alert("Connectez-vous pour ajouter plusieurs destinations !")
+            return
+        }
+
         setSteps([...steps, {
             location_name: '',
             arrival_date: '',
@@ -418,10 +434,12 @@ export default function CreateItinerary() {
                         <button
                             type="button"
                             onClick={addStep}
-                            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-medium transition"
+                            disabled={!isAuthenticated && steps.length >= 1}
+                            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                            title={!isAuthenticated && steps.length >= 1 ? "Connectez-vous pour ajouter plusieurs destinations" : ""}
                         >
                             <Plus className="w-5 h-5" />
-                            Ajouter une étape
+                            {!isAuthenticated && steps.length >= 1 ? "Connectez-vous pour plus" : "Ajouter une étape"}
                         </button>
                         <button
                             type="submit"
